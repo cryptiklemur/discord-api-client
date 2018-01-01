@@ -1,4 +1,4 @@
-const version = require('../package.json').version;
+const version = require("../package.json").version;
 
 export class ClientOptions {
     public token: string;

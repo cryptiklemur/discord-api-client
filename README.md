@@ -20,3 +20,10 @@ const response = await client.request("GET", Endpoints.GATEWAY_BOT);
 
 console.log(response);
 ```
+
+
+## License
+
+Large parts of this lib were taken from https://github.com/abalabahaha/eris/
+
+We follow the MIT License supplied in the [LICENSE](./blob/master/LICENSE) file.

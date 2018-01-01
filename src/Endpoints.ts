@@ -1,3 +1,4 @@
+/* tslint:disable */
 export const CHANNEL = (chanID) => `/channels/${chanID}`;
 export const CHANNEL_BULK_DELETE = (chanID) => `/channels/${chanID}/messages/bulk-delete`;
 export const CHANNEL_CALL_RING = (chanID) => `/channels/${chanID}/call/ring`;
@@ -65,3 +66,4 @@ export const WEBHOOK = (hookID) => `/webhooks/${hookID}`;
 export const WEBHOOK_SLACK = (hookID) => `/webhooks/${hookID}/slack`;
 export const WEBHOOK_TOKEN = (hookID, token) => `/webhooks/${hookID}/${token}`;
 export const WEBHOOK_TOKEN_SLACK = (hookID, token) => `/webhooks/${hookID}/${token}/slack`;
+/* tslint:enable */

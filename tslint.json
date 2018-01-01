@@ -19,6 +19,10 @@
         "interface-name":           [
             true,
             "never-prefix"
+        ],
+        "ban-types":                false,
+        "max-line-length":          [
+            false
         ]
     },
     "jsRules":        {

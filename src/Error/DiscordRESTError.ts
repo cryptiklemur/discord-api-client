@@ -29,7 +29,7 @@ export default class DiscordRESTError extends Error {
         return `${this.constructor.name} [${this.code}]`;
     }
 
-    flattenErrors(errors: any, keyPrefix?: string) {
+    public flattenErrors(errors: any, keyPrefix?: string) {
         keyPrefix = keyPrefix || "";
 
         let messages = [];
@@ -38,7 +38,9 @@ export default class DiscordRESTError extends Error {
                 continue;
             }
             if (errors[fieldName]._errors) {
-                messages = messages.concat(errors[fieldName]._errors.map((obj) => `${keyPrefix + fieldName}: ${obj.message}`));
+                messages = messages.concat(
+                    errors[fieldName]._errors.map((obj) => `${keyPrefix + fieldName}: ${obj.message}`),
+                );
             } else if (Array.isArray(errors[fieldName])) {
                 messages = messages.concat(errors[fieldName].map((str) => `${keyPrefix + fieldName}: ${str}`));
             } else if (typeof errors[fieldName] === "object") {

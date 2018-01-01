@@ -16,8 +16,7 @@
             "esnext"
         ],
         "types":                  [
-            "node",
-            "reflect-metadata"
+            "node"
         ],
         "typeRoots":              [
             "node_modules/@types"

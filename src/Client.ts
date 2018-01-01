@@ -1,19 +1,19 @@
-import {ClientOptions} from "./ClientOptions";
-import Bucket from "./Bucket";
-import MultipartData from "./MultipartData";
-import * as https from "https";
-import {BASE_URL} from "./Constants";
 import {EventEmitter} from "events";
+import * as https from "https";
 import * as Zlib from "zlib";
-import DiscordRESTError from "./Error/DiscordRESTError";
+import Bucket from "./Bucket";
+import {ClientOptions} from "./ClientOptions";
+import {BASE_URL} from "./Constants";
 import DiscordHTTPError from "./Error/DiscordHTTPError";
+import DiscordRESTError from "./Error/DiscordRESTError";
+import MultipartData from "./MultipartData";
 
 export interface FileInterface {
     /**
      * What to name the file
      * @type {String}
      */
-    name: string
+    name: string;
 
     /**
      * A buffer containing file data
@@ -28,12 +28,33 @@ export interface FileInterface {
  * @see https://github.com/abalabahaha/eris/blob/master/lib/rest/RequestHandler.js
  */
 export default class Client extends EventEmitter {
+    private static getRoute(method: string, url: string): string {
+        let route = url
+            .replace(
+                /\/([a-z-]+)\/(?:[0-9]{17,19})/g,
+                (match, p) => ["channels", "guilds", "webhooks"].indexOf(p) >= 0 ? match : `/${p}/:id`,
+            )
+            .replace(/\/reactions\/[^/]+/g, "/reactions/:id")
+            .replace(/^\/webhooks\/(\d+)\/[A-Za-z0-9-_]{64,}/, "/webhooks/$1/:token");
+
+        // Delete Message endpoint has its own ratelimit
+        if (method === "DELETE" && route.endsWith("/messages/:id")) {
+            route = method + route;
+        }
+
+        // PUT/DELETE one/all reactions is shared across the entire account
+        if (~route.indexOf("/reactions/:id")) {
+            route = "/channels/:id/messages/:id/reactions";
+        }
+        return route;
+    }
+
     public latencyReference = {
         latency: 500,
         raw: new Array(10).fill(500),
         timeOffset: 0,
         timeOffsets: new Array(10).fill(0),
-        lastTimeOffsetCheck: 0
+        lastTimeOffsetCheck: 0,
     };
     private options: ClientOptions;
     private blocked: boolean = false;
@@ -64,11 +85,20 @@ export default class Client extends EventEmitter {
      * @param {boolean} auth Whether to add the Authorization header and token or not
      * @param {Object} body Request payload
      * @param {FileInterface|FileInterface[]} file
+     * @param {string} route Predetermined route name
      * @param {boolean} immediate Whether we should skip the queue or not
      *
      * @returns {Promise<Object>} Resolves with the returned JSON data
      */
-    public async request(method: string, url: string, auth: boolean = true, body: any = undefined, file: FileInterface | FileInterface[] = undefined, route: string = undefined, immediate: boolean = false): Promise<any> {
+    public async request(
+        method: string,
+        url: string,
+        auth: boolean = true,
+        body?: any,
+        file?: FileInterface | FileInterface[],
+        route?: string,
+        immediate: boolean = false,
+    ): Promise<any> {
         method = method.toUpperCase();
         route = route || Client.getRoute(method, url);
         const stackHolder: any = {};
@@ -128,12 +158,13 @@ export default class Client extends EventEmitter {
                         data.finish();
                     } else if (body) {
                         // Special PUT&POST case (╯°□°）╯︵ ┻━┻
+                        // tslint:disable-next-line
                         if (method === "GET" || (method === "PUT" && url.includes("/bans/")) || (method === "POST" && url.includes("/prune"))) {
                             let qs = "";
-                            Object.keys(body).forEach(function (key) {
-                                if (body[key] != undefined) {
+                            Object.keys(body).forEach((key) => {
+                                if (body[key] !== undefined) {
                                     if (Array.isArray(body[key])) {
-                                        body[key].forEach(function (val) {
+                                        body[key].forEach((val) => {
                                             qs += `&${encodeURIComponent(key)}=${encodeURIComponent(val)}`;
                                         });
                                     } else {
@@ -178,11 +209,12 @@ export default class Client extends EventEmitter {
                 request.once("response", (response) => {
                     latency = Date.now() - latency;
                     this.latencyReference.raw.push(latency);
-                    this.latencyReference.latency = ~~(this.latencyReference.latency - this.latencyReference.raw.shift()/ 10 + latency / 10);
+                    this.latencyReference.latency =
+                        ~~(this.latencyReference.latency - this.latencyReference.raw.shift() / 10 + latency / 10);
 
                     const headerNow = Date.parse(response.headers.date);
                     if (this.latencyReference.lastTimeOffsetCheck < Date.now() - 5000) {
-                        let timeOffset = ~~((this.latencyReference.lastTimeOffsetCheck = Date.now()) - headerNow);
+                        const timeOffset = ~~((this.latencyReference.lastTimeOffsetCheck = Date.now()) - headerNow);
                         if (this.latencyReference.timeOffset - this.latencyReference.lastTimeOffsetCheck >= this.options.latencyThreshold && timeOffset - this.latencyReference.lastTimeOffsetCheck >= this.options.latencyThreshold) {
                             this.emit("warn", new Error(`Your clock is ${this.latencyReference.timeOffset}ms behind Discord's server clock. Please check your connection and system time.`));
                         }
@@ -190,7 +222,7 @@ export default class Client extends EventEmitter {
                         this.latencyReference.timeOffsets.push(timeOffset);
                     }
 
-                    let responseString = "";
+                    const responseString = "";
                     let responseStream = response;
                     if (response.headers["content-encoding"]) {
                         if (~response.headers["content-encoding"].indexOf("gzip")) {
@@ -203,12 +235,12 @@ export default class Client extends EventEmitter {
                     responseStream
                         .on("data", (str) => response += str)
                         .once("end", () => {
-                            let now = Date.now();
+                            const now = Date.now();
                             if (response.headers["x-ratelimit-limit"]) {
                                 this.buckets[route].limit = +response.headers["x-ratelimit-limit"];
                             }
 
-                            if (method !== "GET" && (response.headers["x-ratelimit-remaining"] == undefined || response.headers["x-ratelimit-limit"] == undefined) && this.buckets[route].limit !== 1) {
+                            if (method !== "GET" && (response.headers["x-ratelimit-remaining"] === undefined || response.headers["x-ratelimit-limit"] === undefined) && this.buckets[route].limit !== 1) {
                                 this.emit("warn", `Missing ratelimit headers for SequentialBucket(${this.buckets[route].remaining}/${this.buckets[route].limit}) with non-default limit\n`
                                     + `${response.statusCode} ${response.headers["content-type"]}: ${method} ${route} | ${response.headers["cf-ray"]}\n`
                                     + "content-type = " + +"\n"
@@ -325,35 +357,13 @@ export default class Client extends EventEmitter {
                         this.buckets[route] = new Bucket(this.options.initialThreshold, this.latencyReference.latency);
                     }
                     this.buckets[route].queue(actualCall, immediate);
-                })
+                });
             } else {
                 if (!this.buckets[route]) {
                     this.buckets[route] = new Bucket(this.options.initialThreshold, this.latencyReference.latency);
                 }
                 this.buckets[route].queue(actualCall, immediate);
             }
-        })
-
-    }
-
-    private static getRoute(method: string, url: string): string {
-        let route = url
-            .replace(
-                /\/([a-z-]+)\/(?:[0-9]{17,19})/g,
-                (match, p) => ["channels", "guilds", "webhooks"].indexOf(p) >= 0 ? match : `/${p}/:id`
-            )
-            .replace(/\/reactions\/[^/]+/g, "/reactions/:id")
-            .replace(/^\/webhooks\/(\d+)\/[A-Za-z0-9-_]{64,}/, "/webhooks/$1/:token");
-
-        // Delete Message endpoint has its own ratelimit
-        if (method === "DELETE" && route.endsWith("/messages/:id")) {
-            route = method + route;
-        }
-
-        // PUT/DELETE one/all reactions is shared across the entire account
-        if (~route.indexOf("/reactions/:id")) {
-            route = "/channels/:id/messages/:id/reactions";
-        }
-        return route;
+        });
     }
 }

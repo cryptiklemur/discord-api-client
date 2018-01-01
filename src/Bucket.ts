@@ -6,21 +6,21 @@ export default class Bucket {
      *
      * @type {number}
      */
-    limit: number;
+    public limit: number;
 
     /**
      * How many calls the bucket has left in the current interval
      *
      * @type {number}
      */
-    remaining: number;
+    public remaining: number;
 
     /**
      * Timestamp of the next reset
      *
      * * @type {number}
      */
-    reset: number = 0;
+    public reset: number = 0;
 
     /**
      * Whether the queue is being processed
@@ -47,6 +47,7 @@ export default class Bucket {
 
     constructor(limit: number = 1, latency: number = 0) {
         this.remaining = limit;
+        this.latency = latency;
     }
 
     /**
@@ -59,7 +60,7 @@ export default class Bucket {
         this.check();
     }
 
-    private check(ignoreProcessing: boolean = false) : void {
+    private check(ignoreProcessing: boolean = false): void {
         if (this.calls.length === 0) {
             if (this.processing) {
                 clearTimeout(this.processing as Timer);
@@ -84,7 +85,7 @@ export default class Bucket {
             this.processing = setTimeout(() => {
                 this.processing = undefined;
                 this.check(true);
-            }, Math.max(0, (this.reset || 0) - now) + this.latency)
+            }, Math.max(0, (this.reset || 0) - now) + this.latency);
 
             return;
         }
