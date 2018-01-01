@@ -1,0 +1,41 @@
+{
+    "name": "discord-api-client",
+    "version": "0.1.0",
+    "description": "Typescript Library for the Discord REST API",
+    "keywords": [
+        "api",
+        "discord",
+        "discordapp",
+        "wrapper",
+        "typescript"
+    ],
+    "main": "dist/index.js",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/aequasi/discord-api-client"
+    },
+    "bugs": {
+        "url": "https://github.com/aequasi/discord-api-client/issues"
+    },
+    "homepage": "https://github.com/aequasi/discord-api-client",
+    "scripts": {
+        "lint": "tslint --fix 'src/**/*.ts'",
+        "compile": "tsc -p ./ && echo 'Finished Compiling'",
+        "test": "npm run lint",
+        "precommit": "npm run test",
+        "prepublishOnly": "npm run test && npm run compile"
+    },
+    "author": "Aaron Scherer <aequasi@gmail.com> (https://aaronscherer.me)",
+    "license": "MIT",
+    "devDependencies": {
+        "@types/debug": "0.0.30",
+        "@types/node": "^8.5.2",
+        "tslint": "^5.8.0",
+        "typescript": "^2.6.2",
+        "typesync": "^0.2.5",
+        "debug": "^3.1.0"
+    },
+    "dependencies": {
+        "await-semaphore": "^0.1.3"
+    }
+}
